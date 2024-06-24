@@ -1,0 +1,52 @@
+
+---
+- name: Gather VMWare Info
+  hosts: localhost
+  become: false
+  gather_facts: false
+
+  tasks:
+    - name: Gather cluster info from given datacenter
+      register: r_cluster_info
+      vmware.vmware_rest.vcenter_cluster_info:
+        datacenters: SDDC-Datacenter
+
+    - name: Debug cluster info
+      tags: debug
+      ansible.builtin.debug:
+        var: r_cluster_info
+
+    - name: Gather information about all datacenters
+      register: r_datacenter_info
+      vmware.vmware_rest.vcenter_datacenter_info:
+
+    - name: Debug datacenter info
+      tags: debug
+      ansible.builtin.debug:
+        var: r_datacenter_info
+
+    - name: Gather info for datastores
+      register: r_datastore_info
+      vmware.vmware_rest.vcenter_datastore_info:
+        datacenters: SDDC-Datacenter
+
+    - name: Debug datastore info
+      tags: debug
+      ansible.builtin.debug:
+        var: r_datastore_info
+
+    - name: Gather info for ESXi hosts
+      register: r_host_facts
+      vmware.vmware_rest.vcenter_host_info:
+
+    - name: Debug host facts
+      ansible.builtin.debug:
+        var: r_host_facts
+
+    - name: Gather all registered virtual machines
+      register: r_guest_info
+      vmware.vmware_rest.vcenter_vm_info:
+
+    - name: Debug guest facts
+      ansible.builtin.debug:
+        var: r_guest_info

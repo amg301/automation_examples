@@ -1,0 +1,16 @@
+---
+- name: Install a specific patch on hosts
+  hosts: "{{ ansible_limit | default(omit) }}"
+  gather_facts: false
+
+  tasks:
+    - name: Copy a Windows Update file from remote directory to local
+      ansible.windows.win_copy:
+        src: \\192.168.1.103\iso\windows10.0-kb4013418-x64.msu
+        dest: C:\windows10.0-kb4013418-x64.msu
+        remote_src: true
+
+    - name: Install Windows Update for KB4013418
+      ansible.windows.win_shell: C:\windows10.0-kb4013418-x64.msu /quiet /norestart
+      register: patch
+...

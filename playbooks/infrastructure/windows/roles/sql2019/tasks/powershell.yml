@@ -1,0 +1,11 @@
+---
+- name: Create SQL 2019 Install Script
+  ansible.windows.win_template:
+    src: installSQL2019.ps1
+    dest: C:\installSQL2019.ps1
+
+- name: Install SQL2019
+  ansible.windows.win_shell: c:\installSQL2019.ps1
+  args:
+    chdir: c:\
+    creates: c:\Program Files\Microsoft SQL Server\MSSQL15.MSSQLSERVER

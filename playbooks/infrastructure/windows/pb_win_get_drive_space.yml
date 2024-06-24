@@ -1,0 +1,14 @@
+---
+- name: Report available drive space on server
+  hosts: "{{ ansible_limit | default(omit) }}"
+  gather_facts: false
+
+  tasks:
+    - name: Get drive space
+      ansible.windows.win_shell: Get-PSDrive C | Select-Object Free | ConvertTo-Json
+      register: drive_space
+
+    - name: Report drive space
+      ansible.builtin.debug:
+        msg: "free drive space: {{ ((drive_space.stdout | from_json)['Free'] | int / (1024 * 1024 * 1024)) | round(2, 'floor') }} GB"
+...

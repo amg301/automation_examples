@@ -1,0 +1,64 @@
+- name: Expand disk on VMware Windows VM
+  hosts: "{{ ansible_limit | default(omit) }}"
+  gather_facts: true
+  vars:
+    disk_fullness_percentage_threshold: 80
+    disk_fullness_percentage: "{{ 100 - (100*(free_drive_space_before|int)/(total_size_before|int))|int }}"
+
+  tasks:
+    - name: Get total disk size
+      ansible.windows.win_shell: (Get-WmiObject -Class Win32_logicaldisk).Size
+      register: drive_total_size
+
+    - name: Set total disk size as fact
+      ansible.builtin.set_fact:
+        total_size_before: "{{ ((drive_total_size.stdout) | int / (1024 * 1024 * 1024)) | round(2, 'floor') }}"
+
+    - name: Get drive space
+      ansible.windows.win_shell: Get-PSDrive C | Select-Object Free | ConvertTo-Json
+      register: drive_space
+
+    - name: Set free drive space
+      ansible.builtin.set_fact:
+        free_drive_space_before: "{{ ((drive_space.stdout | from_json)['Free'] | int / (1024 * 1024 * 1024)) | round(2, 'floor') }}"
+
+    - name: Report calculated free space percentage
+      ansible.builtin.debug:
+        msg: "free drive space:  {{ free_drive_space_before }} GB ({{ 100 - disk_fullness_percentage | int }}% of total space)"
+
+    - name: Report total disk size before growth
+      ansible.builtin.debug:
+        msg: "{{ total_size_before | int | round + 5 }}"
+
+    - name: Expand VM disk and Windows server C drive
+      when: disk_fullness_percentage | int > disk_fullness_percentage_threshold | int
+      block:
+        - name: Expand vm disk to {{ total_size_before | int | round + 5 }}
+          community.vmware.vmware_guest:
+            hostname: "{{ lookup('env', 'VMWARE_HOST') | default(providers.vcenter.hostname) }}"
+            username: "{{ lookup('env', 'VMWARE_USER') | default(providers.vcenter.username) }}"
+            password: "{{ lookup('env', 'VMWARE_PASSWORD') | default(providers.vcenter.password) }}"
+            validate_certs: false
+            name: "{{ config.name }}"
+            disk:
+              - size_gb: "{{ total_size_before | int | round + 5 }}"
+                autoselect_datastore: true
+          delegate_to: localhost
+          vars:
+            ansible_connection: local
+
+        - name: Expand file system
+          ansible.windows.win_shell: Resize-Partition -DriveLetter c -Size  (Get-PartitionSupportedSize -DriveLetter c).sizeMax -ErrorAction SilentlyContinue
+
+        - name: Get drive space
+          ansible.windows.win_shell: Get-PSDrive C | Select-Object Free | ConvertTo-Json
+          register: drive_space_after_expansion
+
+        - name: Set free drive space after expansion
+          ansible.builtin.set_fact:
+            free_drive_space_after: "{{ ((drive_space_after_expansion.stdout | from_json)['Free'] | int / (1024 * 1024 * 1024)) | round(2, 'floor') }}"
+
+        - name: Report disk space percentage after expansion
+          ansible.builtin.debug:
+            msg: "free drive space:  {{ free_drive_space_after }} GB"
+...

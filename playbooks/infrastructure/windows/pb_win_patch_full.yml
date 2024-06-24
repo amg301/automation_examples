@@ -1,0 +1,60 @@
+---
+- name: Install Windows Updates
+  hosts: all
+  gather_facts: true
+
+  tasks:
+    - name: Installing Windows Updates
+      block:
+        - name: Check for missing updates.
+          ansible.windows.win_updates:
+            state: searched
+          register: update_count
+
+        - name: Report number of outstanding updates
+          ansible.builtin.debug:
+            var: update_count
+
+        - name: Install all windows updates
+          ansible.windows.win_updates:
+            category_names:
+              - CriticalUpdates
+              - DefinitionUpdates
+              - SecurityUpdates
+              - UpdateRollups
+              - Updates
+            reboot: true
+          when: update_count.found_update_count | int >= 1
+
+        - name: Install only particular updates based on the KB numbers
+          ansible.windows.win_updates:
+            category_names:
+            - SecurityUpdates
+            accept_list:
+            - KB4056892
+            - KB4073117
+
+      rescue:
+        - name: Reboot before continue to retry
+          ansible.windows.win_reboot:
+
+        - name: Install all windows updates (retry)
+          ansible.windows.win_updates:
+            category_names:
+              - CriticalUpdates
+              - DefinitionUpdates
+              - SecurityUpdates
+              - UpdateRollups
+              - Updates
+            reboot: true
+
+      always:
+        - name: Check for missing updates
+          ansible.windows.win_updates:
+            state: searched
+          register: update_count
+
+        - name: List missing updates
+          ansible.builtin.debug:
+            var: update_count
+...

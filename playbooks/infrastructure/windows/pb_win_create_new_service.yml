@@ -1,0 +1,20 @@
+---
+- name: Expand disk on VMware Windows VM
+  hosts: "{{ ansible_limit | default(omit) }}"
+  gather_facts: false
+
+  tasks:
+    - name: Copy Example Service EXE to Server
+      ansible.windows.win_copy:
+        src: files/ServiceExample.exe
+        dest: C:\Windows\ServiceExample.exe
+
+    - name: Create a new service
+      ansible.windows.win_service:
+        name: service name
+        path: C:\Windows\ServiceExample.exe
+        display_name: Example Service
+        description: This is an example service
+        username: LocalSystem
+        password: ""
+...

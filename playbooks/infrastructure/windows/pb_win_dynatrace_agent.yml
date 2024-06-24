@@ -1,0 +1,36 @@
+---
+- name: Ensure dynatrace agent is installed
+  hosts: all
+  gather_facts: true
+
+  vars:
+    package_url: https://downloads.dynatrace.com/clientservices/agent?version=6.5.0.1289&os=windows&arch=x64&techtype=java_net
+    state: present
+    method: from_package
+
+  tasks:
+    - name: Install using package
+      when: method == from_package
+      block:
+        - name: Download latest dynatrace agent
+          ansible.windows.win_get_url:
+            url: "{{ package_url }}"
+            dest: C:\dynatrace.msi
+          when: state == present
+
+        - name: Ensure dynatrace agent is "{{ state }}"
+          ansible.windows.win_package:
+            path: C:\dynatrace.msi
+            product_id: '{FEF8B348-84EA-4387-87EE-F05C3C1332A6}'
+            state: "{{ state }}"
+            arguments:
+              - /quiet
+
+    - name: Install using Chocolatey
+      when: method == from_chocolatey
+      block:
+        - name: Install using Chocolatey
+          chocolatey.chocolatey.win_chocolatey:
+            name: dynatraceagent
+            state: "{{ state }}"
+...

@@ -1,0 +1,98 @@
+---
+- name: Set up sqladmin user
+  ansible.windows.win_user:
+    name: "{{ mssql_username }}"
+    password: "{{ mssql_password }}"
+    password_never_expires: true
+    state: present
+    groups:
+      - Administrators
+
+- name: Install .Net
+  ansible.windows.win_feature:
+    name: "{{ item }}"
+    state: present
+    include_sub_features: true
+    include_management_tools: true
+  with_items:
+    - NET-Framework-Core
+    - NET-Framework-Features
+  register: install_dotnet
+  until: install_dotnet is success
+  delay: 3
+  retries: 5
+
+- name: Create directory structure
+  ansible.windows.win_file:
+    path: "{{ item }}"
+    state: directory
+  with_items:
+    - C:\Backup
+    - C:\Databases
+    - C:\UserDatabases
+
+- name: Check ISO file
+  ansible.windows.win_stat:
+    path: "{{ iso_path }}"
+  register: iso_file
+  when: (":" in iso_path)
+
+- name: Download ISO file
+  ansible.windows.win_get_url:
+    dest: "{{ iso_path }}"
+    url: "{{ iso_url }}"
+  register: download_iso
+  until: download_iso is success
+  delay: 3
+  retries: 5
+  when: (":" in iso_path) and (not iso_file.stat.exists)
+
+- name: Mount iso
+  community.windows.win_disk_image:
+    image_path: "{{ iso_path }}"
+    state: present
+  register: disk_image_out
+
+- name: Install SQL2019
+  ansible.builtin.import_tasks: "{{ install_with }}.yml"
+  when: ansible_version.full is version('2.4', '>=')
+
+- name: Install SQL2019
+  ansible.builtin.include_tasks: "{{ install_with }}.yml"
+  when: ansible_version.full is version('2.4', '<')
+
+- name: Unmount iso
+  community.windows.win_disk_image:
+    image_path: "{{ iso_path }}"
+    state: absent
+
+- name: Reboot if required
+  ansible.windows.win_reboot:
+  when:
+    - sql_install is defined
+    - sql_install.reboot_required is defined
+    - sql_install.reboot_required
+
+- name: Ensure system is reachable
+  ansible.windows.win_wait_for:
+    delay: 15
+    timeout: 120
+
+- name: Copy script file
+  ansible.windows.win_copy:
+    src: enableSQLTCP.ps1
+    dest: c:\enableSQLTCP.ps1
+
+- name: Enable tcp on SQL server instance
+  ansible.windows.win_shell: c:\enableSQLTCP.ps1
+
+- name: Delete the script
+  ansible.windows.win_file:
+    path: c:\enableSQLTCP.ps1
+    state: absent
+
+- name: Restart SQL Server instance
+  ansible.windows.win_service:
+    name: MSSQLSERVER
+    state: restarted
+    force_dependent_services: true

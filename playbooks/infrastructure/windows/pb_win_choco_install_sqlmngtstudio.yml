@@ -1,0 +1,11 @@
+---
+- name: Ensure SQL Server Management Studio is installed
+  hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Install SQL Server Management Studio
+      chocolatey.chocolatey.win_chocolatey:
+        name: sql-server-management-studio
+        state: latest
+...

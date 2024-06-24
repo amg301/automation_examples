@@ -1,0 +1,8 @@
+- name: Install SQL 2019
+  hosts: "{{ ansible_limit | default(omit) }}"
+  vars:
+    install_with: ini
+
+  roles:
+    - role: sql2019
+...

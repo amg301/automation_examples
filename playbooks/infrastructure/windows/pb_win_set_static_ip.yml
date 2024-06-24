@@ -1,0 +1,33 @@
+---
+- name: Setting static IP address on multiple intefaces
+  hosts: "{{ ansible_limit | default(omit) }}"
+  gather_facts: true
+  vars:
+    second_interface_static_ip_address: 10.10.10.52
+
+  tasks:
+    - name: Install required DSC modules
+      community.windows.win_psmodule:
+        name: NetworkingDsc
+        state: present
+
+    - name: Show current ip address of the 2nd interface
+      ansible.builtin.debug:
+        msg: "{{ ansible_ip_addresses[3] }}"
+
+    - name: Set static address for the 2nd interface
+      ansible.windows.win_dsc:
+        resource_name: IPAddress
+        IPAddress: "{{ second_interface_static_ip_address }}"
+        InterfaceAlias: "{{ ansible_interfaces[1].connection_name }}"
+        AddressFamily: IPV4
+
+    - name: Gather new networking facts
+      ansible.builtin.setup:
+        filter:
+          - 'ansible_ip_addresses'
+
+    - name: Show the new ip address of the 2nd interface
+      ansible.builtin.debug:
+        msg: "{{ ansible_ip_addresses[3] }}"
+...

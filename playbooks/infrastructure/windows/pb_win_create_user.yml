@@ -1,0 +1,17 @@
+---
+- name: Ensure local user is created on windows servers
+  hosts: winsrv
+  gather_facts: true
+  vars:
+    windows_username: exampleuser
+    windows_password: examplepassword
+
+  tasks:
+    - name: Ensure users are created
+      when: ansible_os_family == 'Windows'
+      ansible.windows.win_user:
+        name: "{{ windows_username }}"
+        password: "{{ windows_password }}"
+        state: present
+        groups: "{{ default(Users) }}"
+        
