@@ -1,0 +1,15 @@
+---
+- name: Sync latest Github repo version
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    username: amg301
+    token: # PAT
+    repo_name: test_repo
+
+  tasks:
+    - name: Read-write git checkout from github # noqa latest[git]
+      ansible.builtin.git:
+        repo: 'https://{{ token }}@github.com/{{ username }}/{{ repo_name }}.git'
+        dest: ~/tmp

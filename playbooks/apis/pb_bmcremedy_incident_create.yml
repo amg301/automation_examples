@@ -1,0 +1,20 @@
+- name: Create a token
+  ansible.builtin.uri:
+    url: 
+
+
+
+- name: Create a Incident Ticket
+  ansible.builtin.uri:
+    url: https://testapi.xyz.com/t/app.misc/remedyLogin/1.0/login
+    method: POST
+    headers:
+      Authorization: "Bearer xxxxx-xxxxxx-xxxxxxxxx-xxxxx"
+      Content-Type: application/json
+    body: '{"username": "some_username", "password": "some_password"}'
+    body_format: form-urlencoded
+    validate_certs: False
+    force_basic_auth: yes
+    return_content: yes
+    status_code: 200
+  register: result
