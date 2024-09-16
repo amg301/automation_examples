@@ -1,0 +1,87 @@
+- name: Playbook to update golden templates in VMware
+  hosts: localhost
+  gather_facts: no  
+  vars_files:
+    - vars/pbvars_vmware_template_update.yml
+  
+  tasks:
+    - name: Convert Template "{{ template_name }}" to VM
+      when: template_name is defined
+      community.vmware.vmware_guest:
+        hostname: "{{ vcenter_server }}"
+        username: "{{ vcenter_user }}"
+        password: "{{ vcenter_password }}"
+        datacenter: "{{ vcenter_datacenter }}"
+        validate_certs: no
+        name: "{{ template_name }}"
+
+    - name: Power on VM  "{{ template_name }}"
+      when: template_name is defined
+      register: vm_out
+      community.vmware.vmware_guest:
+        hostname: "{{ vcenter_server }}"
+        username: "{{ vcenter_user }}"
+        password: "{{ vcenter_password }}"
+        datacenter: "{{ vcenter_datacenter }}"
+        validate_certs: no
+        name: "{{ template_name }}"
+        state: poweredon
+        wait_for_ip_address: yes
+
+    - name: Quick pause
+      pause:
+        seconds: 30
+
+    - name: Upgrade VM Tools on "{{ template_name }}"
+      community.vmware.vmware_guest_tools_upgrade:
+        hostname: "{{ vcenter_server }}"
+        username: "{{ vcenter_user }}"
+        password: "{{ vcenter_password }}"
+        datacenter: "{{ vcenter_datacenter }}"
+        validate_certs: no
+        name: "{{ template_name }}"
+
+    - name: Add the host
+      no_log: true
+      ansible.builtin.add_host:
+        name: "{{ vm_out.instance.hw_name }}"
+        ansible_connection: winrm
+        ansible_port: 5986
+        ansible_host: "{{ vm_out.instance.ipv4 }}"
+        ansible_user: "{{ windows_user }}"
+        ansible_password: "{{ windows_user_pass }}"
+
+    - name: Run all security and critical updates
+      delegate_to: "{{ vm_out.instance.hw_name }}"
+      ansible.windows.win_updates:
+        reboot: yes
+        reboot_timeout: 2400
+        category_name:
+          - SecurityUpdates
+          - CriticalUpdates
+          - UpdateRollups
+
+    - name: Power Guest "{{ template_name }}" Off
+      when: template_name is defined
+      register: shutdown
+      community.vmware.vmware_guest:
+        hostname: "{{ vcenter_server }}"
+        username: "{{ vcenter_user }}"
+        password: "{{ vcenter_password }}"
+        datacenter: "{{ vcenter_datacenter }}"
+        validate_certs: no
+        name: "{{ template_name }}"
+        state: shutdownguest
+        state_change_timeout: 240
+
+    - name: Convert VM "{{ template_name }}" to template
+      when: template_name is defined
+      community.vmware.vmware_guest:
+        hostname: "{{ vcenter_server }}"
+        username: "{{ vcenter_user }}"
+        password: "{{ vcenter_password }}"
+        datacenter: "{{ vcenter_datacenter }}"
+        validate_certs: no
+        name: "{{ template_name }}"
+        is_template: yes
+      
