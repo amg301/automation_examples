@@ -1,0 +1,13 @@
+---
+- name: Sync GitLab repo locally
+  hosts: localhost
+  gather_facts: true
+
+  vars:
+    token: # PAT
+
+  tasks:
+    - name: Clone repository from GitLab # noqa latest[git]
+      ansible.builtin.git:
+        repo: 'https://git:{{ token }}@gitlab.bcbsks.com/systems-integration/iac/ansible.git'
+        dest: ~/tmp
