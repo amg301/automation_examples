@@ -1,3 +1,0 @@
-[submodule "playbooks/infrastructure/ibm_aix"]
-	path = playbooks/infrastructure/ibm_aix
-	url = https://github.com/IBM/ansible-power-aix.git
