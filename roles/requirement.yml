@@ -1,0 +1,4 @@
+---
+- src: https://github.com/IBM/ansible-power-aix/roles
+  name: bootptab
+  tags: dev-collection
